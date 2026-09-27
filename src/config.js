@@ -24,6 +24,20 @@ export function getSignalingUrl() {
   return `${wsProtocol}//${window.location.host}/ws`;
 }
 
+/**
+ * True only if the person deploying this app actually set a signaling URL
+ * (via ?signaling= or GESTURESHARE_CONFIG). If this is false, getSignalingUrl()
+ * is guessing a same-origin address that only works for a self-hosted setup
+ * where one process serves both the static site and the WebSocket — on
+ * Vercel/Netlify that guess will always 404, so callers use this to show a
+ * specific, actionable error instead of a generic "connection failed."
+ */
+export function hasExplicitSignalingUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('signaling')) return true;
+  return !!(window.GESTURESHARE_CONFIG && window.GESTURESHARE_CONFIG.signalingUrl);
+}
+
 export function isDebugMode() {
   return new URLSearchParams(window.location.search).get('debug') === '1';
 }
