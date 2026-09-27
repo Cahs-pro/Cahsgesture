@@ -148,7 +148,7 @@ export class GestureStateTracker {
   }
 
   reset() {
-    this.confirmedZone = null;
+    this.confirmedZone = this.config.initialZone ?? null;
     this._pendingZone = null;
     this._pendingCount = 0;
     this._lastEventAt = -Infinity;
