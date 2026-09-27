@@ -1,0 +1,15 @@
+{
+  "name": "gestureshare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GestureShare — grab an image on one device, put it on another. Gesture-controlled, peer-to-peer, no upload.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "dev": "npx serve . -l 5173",
+    "start": "npx serve . -l 5173"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>GestureShare — Gesture-Based Peer-to-Peer File Sharing</title>
+<meta name="description" content="Grab an image on one device, put it on another. GestureShare pairs two devices with a QR code and hands files over peer-to-peer with WebRTC, using a hand gesture instead of an upload button." />
+<meta name="theme-color" content="#05070c" />
+
+<meta property="og:title" content="GestureShare — Grab it. Move it. Put it." />
+<meta property="og:description" content="A gesture-controlled, peer-to-peer way to hand an image from one device to another. No upload, no account." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="/public/assets/og-image.svg" />
+
+<link rel="manifest" href="/public/manifest.json" />
+<link rel="icon" href="/public/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/public/icons/icon-192.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="app-header">
+  <span class="wordmark">GestureShare</span>
+  <span id="connection-status" class="connection-status" role="status" aria-live="polite"></span>
+</header>
+
+<main id="main">
+
+  <!-- ============ WELCOME ============ -->
+  <section data-screen="welcome" class="screen screen--active">
+    <p class="eyebrow-visual" aria-hidden="true">✋ → ✊ → 👋</p>
+    <h1>Grab it. Move it. Put it.</h1>
+    <p class="lede">No upload. No account. Peer-to-peer, straight between two devices.</p>
+    <div class="stack">
+      <button id="pair-device-btn" class="btn btn--primary">Pair Device</button>
+      <button id="scan-qr-btn" class="btn btn--ghost">Scan QR</button>
+    </div>
+    <p class="fineprint">Camera access is used only to recognize the Grab and Put gestures. Nothing is uploaded to a server.</p>
+  </section>
+
+  <!-- ============ SENDER: QR PAIRING ============ -->
+  <section data-screen="qr-pairing" class="screen">
+    <h2>Pair your devices</h2>
+    <div class="qr-frame">
+      <canvas id="qr-canvas" width="280" height="280" aria-label="QR code to pair the other device"></canvas>
+    </div>
+    <p class="lede">Scan this with the other device's camera, or open GestureShare there and choose &ldquo;Scan QR&rdquo;.</p>
+  </section>
+
+  <!-- ============ RECEIVER: SCAN QR ============ -->
+  <section data-screen="scan-qr" class="screen">
+    <h2>Scan the QR code</h2>
+    <div class="camera-frame">
+      <video id="scan-video" playsinline muted></video>
+    </div>
+    <p class="lede">Point your camera at the QR code on the other device.</p>
+  </section>
+
+  <!-- ============ CONNECTED ============ -->
+  <section data-screen="connected" class="screen">
+    <h2>✓ Device connected</h2>
+    <p class="lede">You're ready.</p>
+  </section>
+
+  <!-- ============ SENDER: SELECT IMAGE ============ -->
+  <section data-screen="sender-select" class="screen">
+    <h2>Your turn to send</h2>
+    <p class="lede">Choose an image to hand over.</p>
+    <label class="btn btn--primary file-picker">
+      Select Image
+      <input id="file-input" type="file" accept="image/*" hidden />
+    </label>
+  </section>
+
+  <!-- ============ SENDER: WAITING FOR GRAB ============ -->
+  <section data-screen="sender-grab" class="screen">
+    <h2>Your image</h2>
+    <div class="stage">
+      <img id="sender-image" class="stage__image" alt="" />
+      <video id="sender-video" class="stage__camera" playsinline muted></video>
+    </div>
+    <p class="filemeta"><span id="sender-file-name"></span> · <span id="sender-file-size"></span></p>
+    <p id="sender-gesture-status" class="gesture-status" data-state="none">Show your hand</p>
+    <p class="hint">Make a fist over the image to grab it.</p>
+    <button id="cancel-sender-btn" class="btn btn--ghost">Cancel</button>
+  </section>
+
+  <!-- ============ SENDER: GRABBED / TRANSFERRING ============ -->
+  <section data-screen="sender-grabbed" class="screen">
+    <h2 class="grabbed-badge">✊ File grabbed</h2>
+    <div class="stage stage--floating">
+      <img id="grabbed-image" class="stage__image" alt="" />
+    </div>
+    <p class="lede">Move your hand to the other device.</p>
+    <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="transfer-bar" class="progress__bar"></div>
+    </div>
+    <p id="transfer-label" class="progress-label">Preparing handoff…</p>
+  </section>
+
+  <!-- ============ RECEIVER: WAITING FOR GRAB ============ -->
+  <section data-screen="receiver-waiting" class="screen">
+    <h2>Waiting for a file…</h2>
+    <p class="lede">The other device hasn't grabbed anything yet.</p>
+    <p class="eyebrow-visual" aria-hidden="true">⏳</p>
+  </section>
+
+  <!-- ============ RECEIVER: PUT SCREEN (opens automatically) ============ -->
+  <section data-screen="receiver-put" class="screen">
+    <h2>✋ Put here</h2>
+    <p class="lede">A file is being handed to you.</p>
+    <p class="filemeta"><span id="put-file-name"></span> · <span id="put-file-size"></span></p>
+    <div class="stage">
+      <video id="receiver-video" class="stage__camera stage__camera--main" playsinline muted></video>
+    </div>
+    <p id="receiver-gesture-status" class="gesture-status" data-state="none">Move your hand here and release</p>
+    <div class="progress progress--subtle" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="receiver-transfer-bar" class="progress__bar"></div>
+    </div>
+    <p id="receiver-transfer-label" class="progress-label"></p>
+  </section>
+
+  <!-- ============ RECEIVER: REVEAL ============ -->
+  <section data-screen="receiver-reveal" class="screen">
+    <h2 class="reveal-badge">✨ Received</h2>
+    <div class="stage stage--reveal">
+      <img id="reveal-image" class="stage__image" alt="" />
+    </div>
+    <p class="filemeta"><span id="reveal-file-name"></span> · <span id="reveal-file-meta"></span></p>
+    <div class="stack">
+      <a id="save-received-btn" class="btn btn--primary" download>Save</a>
+      <button id="done-btn" class="btn btn--ghost">Done</button>
+    </div>
+  </section>
+
+  <!-- ============ ERROR ============ -->
+  <section data-screen="error" class="screen">
+    <h2>Something went wrong</h2>
+    <p id="error-message" class="lede" role="alert"></p>
+    <button id="error-retry" class="btn btn--primary">Try again</button>
+  </section>
+
+</main>
+
+<pre id="debug-panel" class="debug-panel" style="display:none" aria-hidden="true"></pre>
+
+<footer class="app-footer">
+  <p>Files travel directly between devices whenever possible and are never uploaded to a file server. <a href="#" id="privacy-note">How it works</a></p>
+</footer>
+
+<script>
+  // Edit this after deploying your own signaling service (see README →
+  // "Signaling architecture"). Left unset, the app falls back to a
+  // same-origin wss:// guess, which only works for a self-hosted setup.
+  window.GESTURESHARE_CONFIG = {
+    signalingUrl: '', // e.g. 'wss://gestureshare-signaling.onrender.com'
+  };
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+</script>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
