@@ -6,7 +6,7 @@
 // modules. This file's only job is wiring: DOM events -> module calls,
 // module callbacks -> state machine events -> screen updates.
 
-import { getSignalingUrl, isDebugMode } from './config.js';
+import { getSignalingUrl, isDebugMode, hasExplicitSignalingUrl } from './config.js';
 import { createSenderMachine, createReceiverMachine } from './app/stateMachine.js';
 import { requestCamera, stopCameraStream, CameraError } from './camera/camera.js';
 import { createHandLandmarker, HandTrackingLoop } from './gestures/handLandmarker.js';
@@ -131,8 +131,16 @@ async function startGestureLoop(videoEl, onEvent, onFrame, trackerConfig = {}) {
 function connectSignaling(sessionId, role) {
   const signaling = new SignalingClient(getSignalingUrl(), sessionId, role);
   resources.signaling = signaling;
+  const notConfiguredMessage =
+    'Signaling xidmətinin ünvanı təyin olunmayıb. index.html faylının sonundakı ' +
+    'GESTURESHARE_CONFIG.signalingUrl sahəsini öz signaling serverinizin wss:// ' +
+    'ünvanına dəyişin (bax: README → "Deployment — signaling service").';
   signaling.on('error', () => {
-    showError('Could not connect to the signaling service. Check your connection and try again.');
+    showError(
+      hasExplicitSignalingUrl()
+        ? 'Could not connect to the signaling service. Check your connection and try again.'
+        : notConfiguredMessage
+    );
   });
   signaling.on(SignalingMessageType.SESSION_EXPIRED, () => {
     showError('This pairing session expired. Start again from the welcome screen.');
@@ -141,7 +149,7 @@ function connectSignaling(sessionId, role) {
     showError('That session is already paired with another device.');
   });
   signaling.on('reconnectFailed', () => {
-    showError('Lost connection to the signaling service.');
+    showError(hasExplicitSignalingUrl() ? 'Lost connection to the signaling service.' : notConfiguredMessage);
   });
   signaling.connect();
   return signaling;
@@ -191,20 +199,17 @@ async function runSenderFlow() {
 
     signaling.on(SignalingMessageType.ANSWER, (msg) => peer.applyAnswer(msg.sdp));
     signaling.on(SignalingMessageType.ICE_CANDIDATE, (msg) => peer.addIceCandidate(msg.candidate));
-    // A dropped peer mid-session should not strand the UI on a dead screen.
     signaling.on(SignalingMessageType.PEER_LEFT, () => showError('The other device disconnected.'));
 
     const offer = await peer.createOfferAsSender();
     signaling.sendOffer(offer);
 
-    // The sender also needs to *receive* the PUT_DETECTED confirmation that
-    // travels back over this same data channel.
     peer.dataChannel.addEventListener('message', (event) => {
       if (typeof event.data !== 'string') return;
       const message = JSON.parse(event.data);
       if (message.type === DataChannelMessageType.PUT_DETECTED) {
         sender.send('PUT_DETECTED');
-        showScreen(dom.screens, 'sender-select'); // ready to send again
+        showScreen(dom.screens, 'sender-select');
         setStatusText(dom.connectionStatus, 'Delivered — ready to grab another file');
       }
     });
@@ -228,7 +233,7 @@ async function runSenderFlow() {
         dom.senderVideo,
         async (event) => {
           if (event !== 'grab') return;
-          if (!sender.can('GRAB_DETECTED')) return; // already grabbed / in flight
+          if (!sender.can('GRAB_DETECTED')) return;
 
           sender.send('GRAB_DETECTED');
           resources.trackingLoop?.stop();
@@ -267,7 +272,8 @@ async function runSenderFlow() {
               debugSnapshot({ role: 'sender', appState: sender.state, gesture: frame })
             );
           }
-        }
+        },
+        { initialZone: 'open' } // sender starts from "hand not yet a fist"
       );
       void tracker;
     } catch (err) {
@@ -278,7 +284,7 @@ async function runSenderFlow() {
   dom.cancelSenderBtn.onclick = () => {
     resources.fileSender?.cancel();
     cleanupAll();
-    location.href = location.pathname; // fresh start, drops ?session=
+    location.href = location.pathname;
   };
 }
 
@@ -316,8 +322,6 @@ async function runReceiverFlow(sessionId) {
             receiver.send('DATA_READY');
             revealImage(objectUrl, name, blob.size, mime);
           } else {
-            // Fully buffered before PUT — remember it, reveal happens the
-            // instant the PUT gesture fires (see below).
             pendingReveal = { objectUrl, name, size: blob.size, mime };
           }
         },
@@ -379,8 +383,6 @@ async function runReceiverFlow(sessionId) {
             receiverMachine.send('DATA_READY');
             revealImage(pendingReveal.objectUrl, pendingReveal.name, pendingReveal.size, pendingReveal.mime);
           }
-          // If not yet buffered, onComplete (above) will call send('DATA_READY')
-          // and reveal the instant the last chunk lands — no restart, no re-fetch.
         },
         (frame) => {
           setGestureStatus(dom.receiverGestureStatus, frame);
@@ -390,7 +392,8 @@ async function runReceiverFlow(sessionId) {
               debugSnapshot({ role: 'receiver', appState: receiverMachine.state, gesture: frame })
             );
           }
-        }
+        },
+        { initialZone: 'closed' } // receiver starts from "holding" the incoming file
       );
     } catch (err) {
       handleCameraError(err);
