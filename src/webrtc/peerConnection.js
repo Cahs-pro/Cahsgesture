@@ -3,6 +3,18 @@
 // Real RTCPeerConnection/RTCDataChannel setup. Cannot be unit tested
 // without a browser WebRTC stack; kept intentionally thin so the only
 // "logic" living here is wiring, not anything that needs its own tests.
+//
+// One deliberate exception: the "disconnected is not the same as failed"
+// debounce below. WebRTC's connectionState routinely flips to
+// 'disconnected' for a few seconds under real network conditions — a
+// brief Wi-Fi hiccup, or simply a burst of load like a data-channel
+// transfer starting — and then recovers to 'connected' on its own. Only
+// 'failed' means the connection is actually dead. Reporting a bare
+// 'disconnected' as fatal (and tearing the whole session down for it)
+// is a common WebRTC mistake that looks exactly like "the app randomly
+// drops the connection right when a transfer starts."
+
+const DISCONNECT_GRACE_MS = 6000;
 
 // Public STUN-only configuration. STUN is enough to establish a direct
 // connection on most home/mobile networks. It is NOT enough on networks
@@ -32,19 +44,13 @@ export const ConnectionState = Object.freeze({
  * client rather than assuming any particular signaling transport.
  */
 export class GesturePeerConnection {
-  /**
-   * @param {{
-   *   signaling: import('../pairing/signalingClient.js').SignalingClient,
-   *   iceServers?: RTCIceServer[],
-   *   onConnectionStateChange?: (state: string) => void,
-   *   onDataChannel?: (channel: RTCDataChannel) => void,
-   * }} options
-   */
   constructor({ signaling, iceServers = DEFAULT_ICE_SERVERS, onConnectionStateChange, onDataChannel }) {
     this.signaling = signaling;
     this.pc = new RTCPeerConnection({ iceServers });
     this.dataChannel = null;
     this._onDataChannel = onDataChannel || (() => {});
+    this._notifyStateChange = onConnectionStateChange || (() => {});
+    this._disconnectTimer = null;
 
     this.pc.addEventListener('icecandidate', (event) => {
       if (event.candidate) {
@@ -53,7 +59,31 @@ export class GesturePeerConnection {
     });
 
     this.pc.addEventListener('connectionstatechange', () => {
-      onConnectionStateChange?.(this.pc.connectionState);
+      const state = this.pc.connectionState;
+
+      if (state === 'connected') {
+        this._clearDisconnectTimer();
+        this._notifyStateChange('connected');
+        return;
+      }
+
+      if (state === 'disconnected') {
+        if (!this._disconnectTimer) {
+          this._disconnectTimer = setTimeout(() => {
+            this._disconnectTimer = null;
+            if (this.pc.connectionState !== 'connected') {
+              this._notifyStateChange('failed');
+            }
+          }, DISCONNECT_GRACE_MS);
+        }
+        return;
+      }
+
+      if (state === 'failed' || state === 'closed') {
+        this._clearDisconnectTimer();
+        this._notifyStateChange(state);
+        return;
+      }
     });
 
     this.pc.addEventListener('datachannel', (event) => {
@@ -62,7 +92,13 @@ export class GesturePeerConnection {
     });
   }
 
-  /** Sender side: creates the data channel and an SDP offer. */
+  _clearDisconnectTimer() {
+    if (this._disconnectTimer) {
+      clearTimeout(this._disconnectTimer);
+      this._disconnectTimer = null;
+    }
+  }
+
   async createOfferAsSender() {
     this.dataChannel = this.pc.createDataChannel('gestureshare', { ordered: true });
     this._onDataChannel(this.dataChannel);
@@ -72,7 +108,6 @@ export class GesturePeerConnection {
     return offer;
   }
 
-  /** Receiver side: applies the sender's offer and creates an SDP answer. */
   async createAnswerFromOffer(offer) {
     await this.pc.setRemoteDescription(offer);
     const answer = await this.pc.createAnswer();
@@ -80,23 +115,20 @@ export class GesturePeerConnection {
     return answer;
   }
 
-  /** Sender side: applies the receiver's answer once it arrives via signaling. */
   async applyAnswer(answer) {
     await this.pc.setRemoteDescription(answer);
   }
 
-  /** Both sides: queue a remote ICE candidate as it arrives via signaling. */
   async addIceCandidate(candidate) {
     try {
       await this.pc.addIceCandidate(candidate);
     } catch (err) {
-      // Late/duplicate candidates are common and harmless — surface
-      // anything else as a console warning rather than crashing the flow.
       console.warn('Failed to add ICE candidate', err);
     }
   }
 
   close() {
+    this._clearDisconnectTimer();
     try {
       this.dataChannel?.close();
     } catch {
