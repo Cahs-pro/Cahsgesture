@@ -78,6 +78,15 @@ export const DEFAULT_GESTURE_CONFIG = Object.freeze({
 export class GestureStateTracker {
   constructor(config = {}) {
     this.config = { ...DEFAULT_GESTURE_CONFIG, ...config };
+    // Assumes a starting posture rather than waiting to passively observe
+    // one. Left null, the first stable reading — whatever it is — becomes
+    // the baseline with no event fired (correct for a truly unknown start).
+    // But GestureShare's two roles each have a known expected starting
+    // posture (sender: hand not yet a fist; receiver: hand already a fist,
+    // about to release) — passing that in as `initialZone` means a user
+    // whose hand reads as the *opposite* posture the instant tracking
+    // starts still gets a real, correctly-classified transition instead of
+    // silently becoming the new baseline.
     this.confirmedZone = config.initialZone ?? null; // 'open' | 'closed' | null
     this._pendingZone = null;
     this._pendingCount = 0;
@@ -102,8 +111,6 @@ export class GestureStateTracker {
     const handDetected = !!landmarks && confidence >= this.config.minDetectionConfidence;
 
     if (!handDetected) {
-      // A dropped frame doesn't erase progress toward stability, but it
-      // also can't contribute to it — treat as a neutral no-op frame.
       this._pendingZone = null;
       this._pendingCount = 0;
       return { event: null, zone: 'none', openness: null, handDetected: false };
@@ -137,10 +144,6 @@ export class GestureStateTracker {
         this._lastEventAt = timestampMs;
       }
 
-      // Whether or not an event fired (e.g. still cooling down), once a
-      // zone has been held stably it becomes the new baseline — this is
-      // what stops the exact same stable pose from re-triggering the
-      // instant the cooldown lifts.
       this.confirmedZone = zone;
     }
 
