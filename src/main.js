@@ -105,7 +105,7 @@ function showError(message, { retryable = true } = {}) {
 // and the receiver's PUT detection — same classifier, different meaning).
 // ---------------------------------------------------------------------------
 
-async function startGestureLoop(videoEl, onEvent, onFrame) {
+async function startGestureLoop(videoEl, onEvent, onFrame, trackerConfig = {}) {
   const stream = await requestCamera({ facingMode: 'user' });
   resources.cameraStream = stream;
   videoEl.srcObject = stream;
