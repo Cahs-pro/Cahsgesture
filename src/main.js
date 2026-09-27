@@ -114,7 +114,7 @@ async function startGestureLoop(videoEl, onEvent, onFrame, trackerConfig = {}) {
   const landmarker = await createHandLandmarker({ numHands: 1 });
   resources.handLandmarker = landmarker;
 
-  const tracker = new GestureStateTracker();
+  const tracker = new GestureStateTracker(trackerConfig);
   const loop = new HandTrackingLoop(videoEl, landmarker, tracker, (frame) => {
     onFrame?.(frame);
     if (frame.event) onEvent(frame.event);
