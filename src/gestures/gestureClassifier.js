@@ -78,7 +78,7 @@ export const DEFAULT_GESTURE_CONFIG = Object.freeze({
 export class GestureStateTracker {
   constructor(config = {}) {
     this.config = { ...DEFAULT_GESTURE_CONFIG, ...config };
-    this.confirmedZone = null; // 'open' | 'closed' | null (unknown yet)
+    this.confirmedZone = config.initialZone ?? null; // 'open' | 'closed' | null
     this._pendingZone = null;
     this._pendingCount = 0;
     this._lastEventAt = -Infinity;
