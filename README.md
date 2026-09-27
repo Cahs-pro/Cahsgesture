@@ -28,6 +28,7 @@ server — it travels peer-to-peer over a WebRTC data channel.
 - [Local development](#local-development)
 - [Testing](#testing)
 - [Deployment — GitHub → Vercel](#deployment--github--vercel)
+- [Deployment — Netlify (alternative to Vercel)](#deployment--netlify-alternative-to-vercel)
 - [Deployment — signaling service](#deployment--signaling-service)
 - [Environment / configuration](#environment--configuration)
 - [Browser compatibility](#browser-compatibility)
@@ -342,12 +343,43 @@ detect.
 
 `npm install` / `npm run build` / `npm start` are **not** required on
 your own machine for this to work — Vercel just serves the static files.
-No `vercel.json` is included because none is needed for a single static
-`index.html` with no client-side routing.
+
+**`vercel.json` matters here — don't remove it.** Vercel's zero-config
+"Other" preset defaults its Output Directory to `public/` *whenever a
+folder named `public` exists in the repo*, regardless of where
+`index.html` actually lives. This project has a `public/` folder (icons,
+manifest) alongside a root-level `index.html`, so without an explicit
+override Vercel serves only the contents of `public/` and every real
+route 404s ("This page doesn't exist"). `vercel.json` pins
+`"outputDirectory": "."` to force it to serve from the actual project
+root. If you ever see that 404 after deploying, check Project Settings →
+Build & Development Settings → Output Directory in the Vercel dashboard
+and make sure it's blank/`.` rather than `public`.
 
 After deploying, set `window.GESTURESHARE_CONFIG.signalingUrl` (bottom of
 `index.html`) to your deployed signaling service's `wss://` URL and
 redeploy — see the next two sections.
+
+## Deployment — Netlify (alternative to Vercel)
+
+Netlify doesn't have Vercel's "guess `public/` as the output" behavior,
+but `netlify.toml` pins `publish = "."` explicitly anyway so there's no
+ambiguity either way:
+
+```text
+1. Push this repository to GitHub (or drag-and-drop the folder into
+   Netlify Drop for a one-off deploy with no git needed).
+2. In Netlify: Add new site → Import an existing project → pick the repo.
+3. Build command: leave empty. Publish directory: leave as "." (netlify.toml
+   already sets this).
+4. Deploy.
+```
+
+Same as Vercel: set `window.GESTURESHARE_CONFIG.signalingUrl` in
+`index.html` to your signaling service's `wss://` URL afterwards, and
+redeploy. Netlify does not run a persistent WebSocket server either —
+`server/` still needs to go to Render/Fly.io/Railway/etc. regardless of
+which one hosts the frontend.
 
 ## Deployment — signaling service
 
@@ -402,6 +434,7 @@ has not been physically verified on iOS in this build (see below).
 | Stuck on "negotiating connection…" | Likely a NAT/firewall that STUN alone can't traverse — see [Known limitations](#known-limitations) re: TURN |
 | GRAB/PUT doesn't trigger | Lighting/hand distance affects the openness score — try adjusting thresholds (see [Gesture system](#gesture-system)) |
 | "That session is already paired" | Someone else already scanned that QR code |
+| Vercel shows "This page doesn't exist" (404) on every route right after deploy | Output Directory got set to `public/` instead of the project root — see the `vercel.json` note in [Deployment — GitHub → Vercel](#deployment--github--vercel) |
 
 ## Known limitations
 

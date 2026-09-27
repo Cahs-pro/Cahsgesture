@@ -1,0 +1,3 @@
+[build]
+  publish = "."
+  # No build command — this is a plain static site with zero bundling.

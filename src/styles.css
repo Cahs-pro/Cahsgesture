@@ -1,0 +1,496 @@
+/* ==========================================================================
+   GestureShare — design tokens
+   Dark-first, glassmorphism, neon cyan / electric purple accents, as
+   specified in the brief. One orchestrated motion moment (the grab/put
+   transitions) rather than scattered hover animation everywhere.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #05070c;
+  --bg-elevated: #0d1420;
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-strong: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.09);
+
+  --cyan: #4ce0e8;
+  --purple: #8b5cf6;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+
+  --text: #eaf2f5;
+  --text-muted: #8ca0ae;
+  --text-faint: #56697a;
+
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --radius-lg: 28px;
+  --radius-md: 18px;
+  --radius-sm: 10px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  scroll-padding-top: var(--safe-top);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background: radial-gradient(ellipse at top, #0a0f1a 0%, var(--bg) 55%);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.4em;
+}
+
+h1 {
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+}
+
+h2 {
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
+}
+
+h1:focus,
+h2:focus {
+  outline: none;
+}
+
+p {
+  margin: 0 0 1em;
+  max-width: 60ch;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--cyan);
+  color: #05070c;
+  padding: 0.6em 1em;
+  border-radius: var(--radius-sm);
+  z-index: 100;
+}
+
+.skip-link:focus {
+  left: 12px;
+  top: calc(var(--safe-top) + 12px);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   Layout shell
+   ========================================================================== */
+
+.app-header {
+  position: sticky;
+  top: var(--safe-top);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  backdrop-filter: blur(14px);
+  background: rgba(5, 7, 12, 0.7);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.connection-status {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+
+main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 2.25rem 1.5rem 4rem;
+}
+
+.app-footer {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
+.app-footer a {
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Screens — one visible at a time, no page navigation
+   ========================================================================== */
+
+.screen {
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  animation: rise 420ms ease both;
+}
+
+.screen--active {
+  display: flex;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen {
+    animation: none;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lede {
+  color: var(--text-muted);
+}
+
+.eyebrow-visual {
+  font-size: 1.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.fineprint {
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
+.hint {
+  color: var(--text-faint);
+  font-size: 0.85rem;
+  margin-top: -0.5em;
+}
+
+.filemeta {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
+  margin: 1.25rem 0;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 0.95em 1.4em;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  min-height: 44px;
+  transition: transform 120ms ease, background 160ms ease, border-color 160ms ease;
+  background: var(--glass);
+  color: var(--text);
+}
+
+.btn:hover {
+  border-color: var(--glass-strong);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn--primary {
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  color: #05070c;
+  border: none;
+}
+
+.btn--ghost {
+  background: transparent;
+}
+
+.file-picker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================================================
+   QR + camera frames
+   ========================================================================== */
+
+.qr-frame,
+.camera-frame {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 0 60px -20px rgba(76, 224, 232, 0.35);
+}
+
+.camera-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* mirrored selfie preview */
+}
+
+#qr-canvas {
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+/* ==========================================================================
+   The "stage" — where the image and/or camera live
+   ========================================================================== */
+
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 1rem;
+}
+
+.stage__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.stage__camera {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 34%;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-strong);
+  object-fit: cover;
+  transform: scaleX(-1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.stage__camera--main {
+  position: static;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-lg);
+  border: none;
+}
+
+.stage--floating .stage__image {
+  animation: float 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage--floating .stage__image {
+    animation: none;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.015);
+  }
+}
+
+.stage--reveal .stage__image {
+  animation: reveal 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage--reveal .stage__image {
+    animation: none;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+/* ==========================================================================
+   Gesture status pill
+   ========================================================================== */
+
+.gesture-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.5em 1em;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.gesture-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.gesture-status[data-state='open']::before {
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+.gesture-status[data-state='closed']::before {
+  background: var(--purple);
+  box-shadow: 0 0 8px var(--purple);
+}
+
+.gesture-status[data-state='ambiguous']::before {
+  background: var(--warning);
+}
+
+.grabbed-badge {
+  color: var(--purple);
+}
+
+.reveal-badge {
+  color: var(--cyan);
+}
+
+/* ==========================================================================
+   Progress
+   ========================================================================== */
+
+.progress {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+
+.progress--subtle {
+  opacity: 0.75;
+  height: 6px;
+}
+
+.progress__bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  transition: width 160ms linear;
+}
+
+.progress-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* ==========================================================================
+   Debug panel
+   ========================================================================== */
+
+.debug-panel {
+  position: fixed;
+  bottom: calc(var(--safe-bottom) + 12px);
+  left: 12px;
+  right: 12px;
+  max-height: 30vh;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 0.75em;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--cyan);
+  white-space: pre-wrap;
+  z-index: 50;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media (min-width: 640px) {
+  main {
+    padding-top: 3.5rem;
+  }
+}
+
+img,
+video {
+  max-width: 100%;
+}

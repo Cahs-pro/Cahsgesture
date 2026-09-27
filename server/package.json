@@ -1,0 +1,17 @@
+{
+  "name": "gestureshare-signaling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone WebSocket signaling service for GestureShare. Deploy separately from the Vercel static frontend — see the root README's 'Signaling architecture' section.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
