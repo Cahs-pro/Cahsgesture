@@ -393,7 +393,7 @@ async function runReceiverFlow(sessionId) {
             );
           }
         },
-        { initialZone: 'closed' } // receiver starts from "holding" the incoming file
+       { initialZone: null } // receiver must genuinely show a closed fist before an open hand counts as PUT
       );
     } catch (err) {
       handleCameraError(err);
